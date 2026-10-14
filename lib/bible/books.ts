@@ -104,6 +104,30 @@ export function findBookById(id: number): Book | undefined {
   return BOOKS.find((book) => book.id === id);
 }
 
+export type ChapterRef = { book: Book; chapter: number };
+
+// The chapter before or after this one, crossing book boundaries
+// (Malachi 4 → Matthew 1). Returns undefined at Genesis 1 / Revelation 22.
+export function adjacentChapter(
+  book: Book,
+  chapter: number,
+  direction: "previous" | "next",
+): ChapterRef | undefined {
+  if (direction === "next") {
+    if (chapter < book.chapterCount) return { book, chapter: chapter + 1 };
+    const nextBook = findBookById(book.id + 1);
+    return nextBook ? { book: nextBook, chapter: 1 } : undefined;
+  }
+
+  if (chapter > 1) return { book, chapter: chapter - 1 };
+  const previousBook = findBookById(book.id - 1);
+  return previousBook ? { book: previousBook, chapter: previousBook.chapterCount } : undefined;
+}
+
+export function chapterHref(book: Book, chapter: number): string {
+  return `/read/${book.slug}/${chapter}`;
+}
+
 // Builds the numeric verse id used in the database (see the migration file).
 export function verseId(bookId: number, chapter: number, verse: number): number {
   return bookId * 1_000_000 + chapter * 1_000 + verse;

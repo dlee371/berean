@@ -46,3 +46,12 @@ body {
   background: var(--paper);
   color: var(--ink);
 }
+
+/* Reader: when the URL ends in #v16, highlight that verse and leave room above it. */
+.verse {
+  scroll-margin-top: 6rem;
+}
+.verse:target {
+  background: var(--accent-soft);
+  box-shadow: 0 0 0 4px var(--accent-soft);
+}
