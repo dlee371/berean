@@ -17,9 +17,10 @@ const SEARCH_LIMIT = 12; // search hits to keep
 const CONTEXT_RADIUS = 2; // verses of context on each side of a hit
 const MAX_VERSES = 40; // total verses sent to the model
 const MAX_REFERENCE_VERSES = 30; // cap for whole-chapter references like "Psalm 119"
-// A verse needs at least one full search-term match to count. (Postgres gives one
-// matching word in a verse a rank of 0.1; weaker partial phrase matches score lower.)
-const MIN_SCORE = 0.1;
+// Hits scoring below this are dropped. Scores add up the rarity of matched words (see the
+// search_verses SQL). A verse matching only a very common word like "God" or "said" scores
+// about 4; one meaningful word like "afraid" or "grace" scores about 10; strong passages 20-60.
+const MIN_SCORE = 6;
 
 // Swap this line to change the search method later (e.g. a vector or hybrid retriever).
 const retriever: Retriever = fullTextRetriever;
