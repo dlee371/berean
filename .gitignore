@@ -43,3 +43,6 @@ next-env.d.ts
 
 # downloaded Bible source data
 /data/
+
+# local Claude Code launch config
+/.claude/
