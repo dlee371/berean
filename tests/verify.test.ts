@@ -54,6 +54,12 @@ describe("correct answers pass", () => {
     expect(result.quotes[0].status).toBe("mismatch");
   });
 
+  it("checks a quote against back-to-back citations together", () => {
+    // The words are in John 3:16, which is the second of the two citations.
+    expect(check('"For God so loved the world" [John 3:15][John 3:16]').quotes[0].status).toBe("exact");
+    expect(check('"For God so loved the world" [John 3:15], [John 3:16]').quotes[0].status).toBe("exact");
+  });
+
   it("accepts a quote spanning a cited range", () => {
     const result = check('"but have eternal life. For God so loved the world" [John 3:15-16]');
     expect(result.status).toBe("verified");
@@ -125,6 +131,11 @@ describe("misquotes are caught", () => {
     expect(result.status).toBe("flagged");
   });
 
+  it("flags a dropped word", () => {
+    // Real WEB: "In nothing be anxious, but in everything, by prayer..." ("be" dropped here)
+    expect(check('"In nothing anxious, but in everything" [Philippians 4:6]').quotes[0].status).toBe("mismatch");
+  });
+
   it("flags an added word", () => {
     const result = check('"In nothing be anxious at all" [Philippians 4:6]');
     expect(result.quotes[0].status).toBe("mismatch");
@@ -149,6 +160,19 @@ describe("misquotes are caught", () => {
     const result = check('The word "shepherd" here, and the name "Ezekiel" there.');
     expect(result.quotes.map((q) => q.status)).toEqual(["uncited", "ignored"]);
     expect(result.problems).toBe(0);
+  });
+
+  it("allows quoting the user's own question back to them", () => {
+    const question = "Where does Jesus say 'God helps those who help themselves'?";
+    const answer = 'Jesus never says "God helps those who help themselves." It is a popular proverb.';
+    expect(verifyAnswer(answer, RETRIEVED, EXISTING, question).quotes[0].status).toBe("from_question");
+    // Without the question, the same quote is unsupported.
+    expect(verifyAnswer(answer, RETRIEVED, EXISTING).quotes[0].status).toBe("unsupported");
+  });
+
+  it("flags words altered with brackets", () => {
+    // Real WEB: "In nothing be anxious, ..." — "be[ing]" changes the words.
+    expect(check('"In nothing be[ing] anxious" [Philippians 4:6]').quotes[0].status).toBe("mismatch");
   });
 
   it("only attaches a citation that comes right after the quote", () => {

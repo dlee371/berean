@@ -12,6 +12,7 @@
 //   mismatch       doesn't match the cited verse(s)
 //   unsupported    no citation, 4+ words, and not found in any retrieved verse
 //   uncited        no citation, but found word for word in a retrieved verse (passes)
+//   from_question  repeats words from the user's question, e.g. a saying they asked about (passes)
 //   ignored        no citation and under 4 words, e.g. a name or term in quotes (not checked)
 import { verseId } from "@/lib/bible/books";
 import { formatReference } from "@/lib/bible/references";
@@ -21,7 +22,14 @@ import { findQuotes, quoteMatches, wordCount } from "@/lib/verify/quotes";
 export type VerseLike = { id: number; reference: string; text: string };
 
 export type CitationStatus = "verified" | "not_retrieved" | "invalid";
-export type QuoteStatus = "exact" | "wrong_verse" | "mismatch" | "unsupported" | "uncited" | "ignored";
+export type QuoteStatus =
+  | "exact"
+  | "wrong_verse"
+  | "mismatch"
+  | "unsupported"
+  | "uncited"
+  | "from_question"
+  | "ignored";
 
 export type CitationCheck = {
   index: number;
@@ -48,7 +56,7 @@ export type Verification = {
   problems: number;
 };
 
-const PASSING_QUOTES: QuoteStatus[] = ["exact", "uncited", "ignored"];
+const PASSING_QUOTES: QuoteStatus[] = ["exact", "uncited", "from_question", "ignored"];
 const MAX_GAP_TO_CITATION = 80; // characters between a quote's end and its citation
 const MIN_WORDS_TO_CHECK_UNCITED = 4;
 
@@ -62,6 +70,9 @@ export function verifyAnswer(
   // Ids of cited verses that exist in the Bible but weren't retrieved (looked up by the caller).
   // Used only to tell "not_retrieved" apart from "invalid".
   existingIds: Set<number> = new Set(),
+  // The user's question. Quoting it back ("Jesus never says 'God helps those who help
+  // themselves'") isn't a claim about Scripture, so those quotes aren't checked.
+  question = "",
 ): Verification {
   const byId = new Map(retrieved.map((v) => [v.id, v]));
   const sorted = [...retrieved].sort((a, b) => a.id - b.id);
@@ -133,10 +144,23 @@ export function verifyAnswer(
 
     if (citation) {
       const attached = { ...base, citationIndex: citation.index };
-      if (citation.status !== "verified") {
+
+      // Back-to-back citations count as one group: "..." [Colossians 3:14][Colossians 3:15]
+      // means the quote comes from somewhere in those verses.
+      const group = [citation];
+      for (const next of citations.slice(citations.indexOf(citation) + 1)) {
+        const last = group[group.length - 1];
+        const between = answer.slice(last.index + last.length, next.index);
+        if (!/^[\s,;]*(and\s*)?$/.test(between)) break;
+        group.push(next);
+      }
+      const verifiedInGroup = group.filter((c) => c.status === "verified");
+
+      if (verifiedInGroup.length === 0) {
         return { ...attached, status: "mismatch", detail: "Its citation couldn't be verified, so the quote can't be either." };
       }
-      if (quoteMatches(q.text, citedText.get(citation.index) ?? "")) {
+      const groupText = verifiedInGroup.map((c) => citedText.get(c.index) ?? "").join(" ");
+      if (quoteMatches(q.text, groupText)) {
         return { ...attached, status: "exact" };
       }
       const elsewhere = sorted.find((v) => quoteMatches(q.text, v.text));
@@ -156,6 +180,7 @@ export function verifyAnswer(
 
     // No citation nearby.
     if (quoteMatches(q.text, allRetrievedText)) return { ...base, status: "uncited" };
+    if (question && quoteMatches(q.text, question)) return { ...base, status: "from_question" };
     if (wordCount(q.text) < MIN_WORDS_TO_CHECK_UNCITED) return { ...base, status: "ignored" };
     return {
       ...base,

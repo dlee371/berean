@@ -5,6 +5,24 @@ import { retrieve } from "@/lib/retrieval";
 import { buildUserMessage, notFoundMessage, SYSTEM_PROMPT } from "@/lib/chat/prompt";
 import type { ChatEvent, ClientPassage, HistoryTurn } from "@/lib/chat/events";
 import type { RetrievalResult } from "@/lib/retrieval/types";
+import { createPublicClient } from "@/lib/supabase/public";
+import { verifyAnswer } from "@/lib/verify";
+import { findCitations, referenceVerseIds } from "@/lib/verify/citations";
+
+// For cited verses the model wasn't given, ask the database which ones really exist,
+// so the checker can say "real verse, not retrieved" vs "doesn't exist".
+async function lookupExistingIds(answer: string, retrieval: RetrievalResult): Promise<Set<number>> {
+  const retrievedIds = new Set(retrieval.verses.map((v) => v.id));
+  const unknown = findCitations(answer)
+    .flatMap((c) => c.references.flatMap(referenceVerseIds))
+    .filter((id) => !retrievedIds.has(id))
+    .slice(0, 200);
+  if (unknown.length === 0) return new Set();
+
+  const { data, error } = await createPublicClient().from("verses").select("id").in("id", unknown);
+  if (error) throw new Error(`Verse lookup failed: ${error.message}`);
+  return new Set((data ?? []).map((row) => row.id));
+}
 
 function toClientPassages(retrieval: RetrievalResult): ClientPassage[] {
   return retrieval.passages.map((passage) => ({
@@ -59,12 +77,19 @@ export async function* answerQuestion(
     { signal },
   );
 
+  let answer = "";
   for await (const event of stream) {
     if (event.type === "content_block_delta" && event.delta.type === "text_delta") {
+      answer += event.delta.text;
       yield { type: "text", text: event.delta.text };
     }
   }
 
   const final = await stream.finalMessage();
+
+  // The anti-hallucination check: every citation and quote is compared with the verses
+  // that were actually retrieved, here on the server, before the answer is marked verified.
+  const existingIds = await lookupExistingIds(answer, retrieval);
+  yield { type: "verification", verification: verifyAnswer(answer, retrieval.verses, existingIds, question) };
   yield { type: "done", status: final.stop_reason === "refusal" ? "refused" : "answered" };
 }

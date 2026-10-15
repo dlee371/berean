@@ -4,7 +4,9 @@ import { useCallback, useRef, useState } from "react";
 import { AnswerText } from "@/components/AnswerText";
 import { ContextNote } from "@/components/ContextNote";
 import { PassagePanel } from "@/components/PassagePanel";
+import { VerificationBadge } from "@/components/VerificationBadge";
 import type { ChatEvent, ClientPassage, HistoryTurn } from "@/lib/chat/events";
+import type { Verification } from "@/lib/verify";
 
 type Status = "searching" | "streaming" | "answered" | "not_found" | "refused" | "error";
 
@@ -13,6 +15,7 @@ type Message = {
   role: "user" | "assistant";
   content: string;
   passages?: ClientPassage[];
+  verification?: Verification;
   status?: Status; // assistant messages only
 };
 
@@ -87,6 +90,9 @@ export function Chat() {
             break;
           case "text":
             updateMessage(assistantId, (m) => ({ content: m.content + event.text }));
+            break;
+          case "verification":
+            updateMessage(assistantId, () => ({ verification: event.verification }));
             break;
           case "done":
             updateMessage(assistantId, () => ({ status: event.status }));
@@ -180,7 +186,7 @@ export function Chat() {
 }
 
 function AssistantMessage({ message, onCite }: { message: Message; onCite: (ref: string) => void }) {
-  const { status, content, passages = [] } = message;
+  const { status, content, passages = [], verification } = message;
 
   if (status === "searching") {
     return <p className="animate-pulse text-muted">Searching the Scriptures…</p>;
@@ -195,8 +201,9 @@ function AssistantMessage({ message, onCite }: { message: Message; onCite: (ref:
       {status === "error" ? (
         <p className="text-warn">{content}</p>
       ) : (
-        <AnswerText text={content} onCite={onCite} />
+        <AnswerText text={content} verification={verification} onCite={onCite} />
       )}
+      {verification && <VerificationBadge verification={verification} />}
       {status === "streaming" && <span className="inline-block h-4 w-2 animate-pulse bg-muted" />}
       {status === "refused" && (
         <p className="text-sm text-warn">Berean wasn&apos;t able to finish answering this question.</p>
