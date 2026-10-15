@@ -15,6 +15,11 @@ export const metadata: Metadata = {
   title: "Berean: Bible study with verified citations",
   description:
     "Ask questions about the Bible and get answers drawn only from the text, with every citation checked.",
+  openGraph: {
+    title: "Berean",
+    description: "Bible study answers drawn only from the text, with every citation verified.",
+    type: "website",
+  },
 };
 
 export const viewport: Viewport = {
@@ -55,7 +60,10 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
         <footer className="border-t border-line">
           <p className="mx-auto max-w-3xl px-4 py-4 text-xs leading-relaxed text-muted">
             Scripture from the World English Bible (public domain). Berean is a study aid, not a
-            pastor. Please read every passage in its full context.
+            pastor. Please read every passage in its full context.{" "}
+            <Link href="/about" className="underline hover:text-ink">
+              How it works
+            </Link>
           </p>
         </footer>
       </body>

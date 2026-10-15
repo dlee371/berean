@@ -1,6 +1,6 @@
 // GET /api/passage?ref=John%203:16-18 → the whole chapter, with the cited verses marked.
 // Used by the side panel when someone clicks a citation.
-import { chapterHref } from "@/lib/bible/books";
+import { chapterHref, chapterLabel } from "@/lib/bible/books";
 import { formatReference, findReferences } from "@/lib/bible/references";
 import { getChapter } from "@/lib/bible/queries";
 
@@ -26,7 +26,7 @@ export async function GET(request: Request) {
 
   return Response.json({
     reference: formatReference(reference),
-    title: `${book.name} ${chapter}`,
+    title: chapterLabel(book, chapter),
     readerHref: `${chapterHref(book, chapter)}${verseStart ? `#v${verseStart}` : ""}`,
     verses: verses.map((v) => ({ ...v, highlighted: v.verse >= start && v.verse <= end })),
   });

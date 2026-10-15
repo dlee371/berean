@@ -1,6 +1,6 @@
 // Finds Bible references like "John 3:16", "Ps 23", or "1 Cor 13:4-7" in a piece of text.
 // Used for direct lookups in retrieval (Phase 3) and for reading citations (Phase 5).
-import { BOOKS, type Book } from "@/lib/bible/books";
+import { BOOKS, chapterLabel, type Book } from "@/lib/bible/books";
 
 export type Reference = {
   book: Book;
@@ -139,9 +139,9 @@ export function findReferences(text: string): Reference[] {
   return found;
 }
 
-// "John 3:16", "John 3:16-18", or "Psalms 23".
+// "John 3:16", "John 3:16-18", or "Psalm 23".
 export function formatReference(ref: Reference): string {
-  const base = `${ref.book.name} ${ref.chapter}`;
+  const base = chapterLabel(ref.book, ref.chapter);
   if (ref.verseStart === undefined) return base;
   if (ref.verseEnd === undefined) return `${base}:${ref.verseStart}`;
   return `${base}:${ref.verseStart}-${ref.verseEnd}`;

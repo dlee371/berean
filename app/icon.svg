@@ -1,0 +1,6 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64">
+  <rect width="64" height="64" rx="14" fill="#5b6b4a"/>
+  <!-- an open book -->
+  <path d="M14 20c6-2 12-1 18 3v25c-6-4-12-5-18-3z" fill="#faf8f3"/>
+  <path d="M50 20c-6-2-12-1-18 3v25c6-4 12-5 18-3z" fill="#eef1e8"/>
+</svg>

@@ -5,8 +5,8 @@ import { verifyAnswer, type VerseLike } from "@/lib/verify";
 
 // Exact WEB text for the verses "retrieved" in these tests.
 const RETRIEVED: VerseLike[] = [
-  { id: 19023001, reference: "Psalms 23:1", text: "A Psalm by David. The LORD is my shepherd; I shall lack nothing." },
-  { id: 19023002, reference: "Psalms 23:2", text: "He makes me lie down in green pastures. He leads me beside still waters." },
+  { id: 19023001, reference: "Psalm 23:1", text: "A Psalm by David. The LORD is my shepherd; I shall lack nothing." },
+  { id: 19023002, reference: "Psalm 23:2", text: "He makes me lie down in green pastures. He leads me beside still waters." },
   { id: 40006009, reference: "Matthew 6:9", text: "Pray like this: “‘Our Father in heaven, may your name be kept holy." },
   { id: 42010041, reference: "Luke 10:41", text: "Jesus answered her, “Martha, Martha, you are anxious and troubled about many things," },
   { id: 43003015, reference: "John 3:15", text: "that whoever believes in him should not perish, but have eternal life." },

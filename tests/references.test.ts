@@ -6,7 +6,7 @@ const refs = (text: string) => findReferences(text).map(formatReference);
 describe("findReferences", () => {
   it("finds common forms", () => {
     expect(refs("What does John 3:16 mean?")).toEqual(["John 3:16"]);
-    expect(refs("explain psalm 23")).toEqual(["Psalms 23"]);
+    expect(refs("explain psalm 23")).toEqual(["Psalm 23"]);
     expect(refs("Gen 1:1")).toEqual(["Genesis 1:1"]);
     expect(refs("Mark 4:1-20 parable")).toEqual(["Mark 4:1-20"]);
   });

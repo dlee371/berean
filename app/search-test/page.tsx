@@ -1,7 +1,8 @@
 // /search-test: a developer page showing raw retrieval results, so you can see exactly
-// which verses the AI would be given for a question. Removed before launch (Phase 7).
+// which verses the AI would be given for a question. Only available in development.
 import type { Metadata } from "next";
 import Link from "next/link";
+import { notFound } from "next/navigation";
 import { Suspense } from "react";
 import { chapterHref, findBookById } from "@/lib/bible/books";
 import { retrieve } from "@/lib/retrieval";
@@ -122,6 +123,9 @@ async function Results({ searchParams }: { searchParams: PageProps<"/search-test
 }
 
 export default function SearchTestPage({ searchParams }: PageProps<"/search-test">) {
+  // Developer tool only: each search calls Claude, so it's hidden on the live site.
+  if (process.env.NODE_ENV === "production") notFound();
+
   return (
     <div className="space-y-6">
       <header className="space-y-1">

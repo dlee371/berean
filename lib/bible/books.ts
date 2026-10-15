@@ -124,6 +124,11 @@ export function adjacentChapter(
   return previousBook ? { book: previousBook, chapter: previousBook.chapterCount } : undefined;
 }
 
+// "John 3", but "Psalm 23" (one psalm, singular), as people usually write it.
+export function chapterLabel(book: Book, chapter: number): string {
+  return `${book.slug === "psalms" ? "Psalm" : book.name} ${chapter}`;
+}
+
 export function chapterHref(book: Book, chapter: number): string {
   return `/read/${book.slug}/${chapter}`;
 }

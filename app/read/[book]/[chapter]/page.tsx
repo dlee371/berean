@@ -4,7 +4,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { Suspense } from "react";
-import { adjacentChapter, chapterHref, findBookBySlug, type Book } from "@/lib/bible/books";
+import { adjacentChapter, chapterHref, chapterLabel, findBookBySlug, type Book } from "@/lib/bible/books";
 import { getChapter } from "@/lib/bible/queries";
 
 // Turns the URL pieces into a real book + chapter number, or undefined if they're invalid.
@@ -22,7 +22,7 @@ export async function generateMetadata({
 }: PageProps<"/read/[book]/[chapter]">): Promise<Metadata> {
   const { book, chapter } = await params;
   const ref = resolve(book, chapter);
-  return { title: ref ? `${ref.book.name} ${ref.chapter} · Berean` : "Not found · Berean" };
+  return { title: ref ? `${chapterLabel(ref.book, ref.chapter)} · Berean` : "Not found · Berean" };
 }
 
 function ChapterNav({ book, chapter }: { book: Book; chapter: number }) {
@@ -34,14 +34,14 @@ function ChapterNav({ book, chapter }: { book: Book; chapter: number }) {
     <nav className="flex items-center justify-between gap-2 text-sm">
       {previous ? (
         <Link href={chapterHref(previous.book, previous.chapter)} className={linkClass}>
-          ← {previous.book.name} {previous.chapter}
+          ← {chapterLabel(previous.book, previous.chapter)}
         </Link>
       ) : (
         <span />
       )}
       {next ? (
         <Link href={chapterHref(next.book, next.chapter)} className={linkClass}>
-          {next.book.name} {next.chapter} →
+          {chapterLabel(next.book, next.chapter)} →
         </Link>
       ) : (
         <span />
@@ -63,7 +63,7 @@ async function Chapter({ params }: { params: PageProps<"/read/[book]/[chapter]">
   return (
     <>
       <h1 className="font-serif text-3xl font-semibold">
-        {book.name} {chapter}
+        {chapterLabel(book, chapter)}
       </h1>
 
       <ChapterNav book={book} chapter={chapter} />
