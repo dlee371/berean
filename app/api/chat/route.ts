@@ -1,8 +1,12 @@
-// POST /api/chat: { question, history } → a stream of newline-separated JSON events.
-// All Claude calls happen here on the server, so the API key never reaches the browser.
+// POST /api/chat: { question, history, conversationId? } → a stream of newline-separated
+// JSON events. All Claude calls happen here on the server, so the API key never reaches
+// the browser. For logged-in users, both the question and the verified answer are saved.
 import { z } from "zod";
+import { getCurrentUser } from "@/lib/auth";
 import { answerQuestion } from "@/lib/chat/answer";
 import type { ChatEvent } from "@/lib/chat/events";
+import { conversationExists, createConversation, saveMessage, type SavedMessage } from "@/lib/conversations";
+import { createClient } from "@/lib/supabase/server";
 
 // Validate the request body. Limits keep a single request from getting huge (and costly).
 const RequestSchema = z.object({
@@ -16,6 +20,7 @@ const RequestSchema = z.object({
     )
     .max(12)
     .default([]),
+  conversationId: z.uuid().optional(),
 });
 
 export async function POST(request: Request) {
@@ -25,6 +30,9 @@ export async function POST(request: Request) {
   }
   const { question, history } = parsed.data;
 
+  const user = await getCurrentUser();
+  const supabase = await createClient();
+
   const encoder = new TextEncoder();
   const send = (controller: ReadableStreamDefaultController, event: ChatEvent) =>
     controller.enqueue(encoder.encode(JSON.stringify(event) + "\n"));
@@ -32,9 +40,52 @@ export async function POST(request: Request) {
   // A ReadableStream lets us send the response a piece at a time as Claude writes it.
   const body = new ReadableStream({
     async start(controller) {
+      // Saving is best-effort: if it fails, the user still gets their answer.
+      let conversationId: string | null = null;
+      if (user) {
+        try {
+          const requested = parsed.data.conversationId;
+          conversationId =
+            requested && (await conversationExists(supabase, requested))
+              ? requested
+              : await createConversation(supabase, question);
+          await saveMessage(supabase, conversationId, {
+            role: "user",
+            content: question,
+            status: null,
+            passages: null,
+            verification: null,
+          });
+          send(controller, { type: "conversation", id: conversationId });
+        } catch (error) {
+          console.error("Saving question failed:", error);
+          conversationId = null;
+        }
+      }
+
+      // Collect the answer as it streams, so it can be saved at the end.
+      const answer: Omit<SavedMessage, "id"> = {
+        role: "assistant",
+        content: "",
+        status: null,
+        passages: null,
+        verification: null,
+      };
+
       try {
         for await (const event of answerQuestion(question, history, request.signal)) {
           send(controller, event);
+          if (event.type === "retrieval") answer.passages = event.passages;
+          if (event.type === "text") answer.content += event.text;
+          if (event.type === "verification") answer.verification = event.verification;
+          if (event.type === "done") answer.status = event.status;
+        }
+
+        // Only finished answers are saved, with the server's own verification result.
+        if (conversationId && answer.status) {
+          await saveMessage(supabase, conversationId, answer).catch((error) =>
+            console.error("Saving answer failed:", error),
+          );
         }
       } catch (error) {
         if (!request.signal.aborted) {

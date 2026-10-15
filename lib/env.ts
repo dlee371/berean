@@ -24,3 +24,8 @@ export function supabasePublishableKey(): string {
     process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY,
   );
 }
+
+// Server-only: the app's public address, used in login email links.
+export function siteUrl(): string {
+  return required("SITE_URL", process.env.SITE_URL).replace(/\/$/, "");
+}

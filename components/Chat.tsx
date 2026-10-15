@@ -1,5 +1,6 @@
 "use client";
 // The chat screen: question box, streamed answers with citation chips, and the passage panel.
+import Link from "next/link";
 import { useCallback, useRef, useState } from "react";
 import { AnswerText } from "@/components/AnswerText";
 import { ContextNote } from "@/components/ContextNote";
@@ -10,7 +11,7 @@ import type { Verification } from "@/lib/verify";
 
 type Status = "searching" | "streaming" | "answered" | "not_found" | "refused" | "error";
 
-type Message = {
+export type Message = {
   id: string;
   role: "user" | "assistant";
   content: string;
@@ -42,9 +43,17 @@ async function readEvents(response: Response, onEvent: (event: ChatEvent) => voi
   }
 }
 
-export function Chat() {
+type ChatProps = {
+  // For a saved conversation (/c/[id]): its id and the messages loaded from the database.
+  initialConversationId?: string;
+  initialMessages?: Message[];
+};
+
+export function Chat({ initialConversationId, initialMessages = [] }: ChatProps) {
   // useState holds values that, when changed, make React redraw the screen.
-  const [messages, setMessages] = useState<Message[]>([]);
+  const [messages, setMessages] = useState<Message[]>(initialMessages);
+  // Set once the server saves this chat (logged-in users only).
+  const [conversationId, setConversationId] = useState<string | undefined>(initialConversationId);
   const [input, setInput] = useState("");
   const [busy, setBusy] = useState(false);
   const [openReference, setOpenReference] = useState<string | null>(null);
@@ -78,13 +87,18 @@ export function Chat() {
       const response = await fetch("/api/chat", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ question, history }),
+        body: JSON.stringify({ question, history, conversationId }),
       });
       if (!response.ok || !response.body) throw new Error(`HTTP ${response.status}`);
 
       await readEvents(response, (event) => {
         // `switch` on the discriminated union's `type`; TypeScript knows each case's fields.
         switch (event.type) {
+          case "conversation":
+            // Saved: put the conversation's address in the URL so a refresh or bookmark works.
+            setConversationId(event.id);
+            window.history.replaceState(null, "", `/c/${event.id}`);
+            break;
           case "retrieval":
             updateMessage(assistantId, () => ({ passages: event.passages, status: "streaming" }));
             break;
@@ -114,6 +128,15 @@ export function Chat() {
 
   // useCallback keeps the same function between redraws, so the panel's effect doesn't re-run.
   const closePanel = useCallback(() => setOpenReference(null), []);
+
+  function newChat() {
+    setMessages([]);
+    setConversationId(undefined);
+    setInput("");
+    window.history.replaceState(null, "", "/");
+  }
+
+  const answeredOnce = messages.some((m) => m.role === "assistant" && m.status && m.status !== "searching" && m.status !== "streaming");
 
   return (
     <div className="flex min-h-[60vh] flex-col">
@@ -156,6 +179,22 @@ export function Chat() {
       )}
 
       <div ref={bottomRef} />
+
+      {messages.length > 0 && !busy && (
+        <div className="flex flex-wrap items-center justify-between gap-2 pb-2 text-sm text-muted">
+          <button onClick={newChat} className="hover:text-ink">
+            + New chat
+          </button>
+          {answeredOnce && !conversationId && (
+            <span>
+              <Link href="/login" className="text-accent hover:underline">
+                Sign in
+              </Link>{" "}
+              to save your conversations.
+            </span>
+          )}
+        </div>
+      )}
 
       <form
         onSubmit={(event) => {

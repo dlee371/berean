@@ -20,6 +20,7 @@ export type ClientPassage = {
 // TypeScript note: this is a "discriminated union". Every event has a `type` field, and
 // checking it (if (event.type === "text") ...) tells TypeScript which other fields exist.
 export type ChatEvent =
+  | { type: "conversation"; id: string } // logged-in users: the saved conversation's id
   | { type: "retrieval"; passages: ClientPassage[] } // the verses the answer may use
   | { type: "text"; text: string } // the next piece of the answer
   | { type: "verification"; verification: Verification } // the citation check, after the answer

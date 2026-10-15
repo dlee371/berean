@@ -1,6 +1,8 @@
 import type { Metadata, Viewport } from "next";
 import { Inter, Literata } from "next/font/google";
 import Link from "next/link";
+import { Suspense } from "react";
+import { UserNav } from "@/components/UserNav";
 import "./globals.css";
 
 // Inter for the interface, Literata (a serif designed for long reading) for Scripture.
@@ -33,13 +35,17 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
             <Link href="/" className="font-serif text-xl font-semibold tracking-tight">
               Berean
             </Link>
-            <div className="flex gap-5 text-sm text-muted">
+            <div className="flex items-center gap-4 text-sm text-muted sm:gap-5">
               <Link href="/" className="hover:text-ink">
                 Ask
               </Link>
               <Link href="/read" className="hover:text-ink">
                 Read
               </Link>
+              {/* Depends on the login cookie, so it loads separately from the static header. */}
+              <Suspense>
+                <UserNav />
+              </Suspense>
             </div>
           </nav>
         </header>
