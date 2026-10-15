@@ -5,8 +5,12 @@ import { z } from "zod";
 import { getCurrentUser } from "@/lib/auth";
 import { answerQuestion } from "@/lib/chat/answer";
 import type { ChatEvent } from "@/lib/chat/events";
+import { checkRateLimit } from "@/lib/rateLimit";
 import { conversationExists, createConversation, saveMessage, type SavedMessage } from "@/lib/conversations";
 import { createClient } from "@/lib/supabase/server";
+
+// Allow up to 60 seconds for retrieval plus a streamed answer (the hosting platform's limit).
+export const maxDuration = 60;
 
 // Validate the request body. Limits keep a single request from getting huge (and costly).
 const RequestSchema = z.object({
@@ -29,6 +33,12 @@ export async function POST(request: Request) {
     return Response.json({ error: "Invalid request" }, { status: 400 });
   }
   const { question, history } = parsed.data;
+
+  // Checked before any Claude call, so blocked requests cost nothing.
+  const limit = await checkRateLimit(request);
+  if (!limit.ok) {
+    return Response.json({ error: limit.message }, { status: 429 });
+  }
 
   const user = await getCurrentUser();
   const supabase = await createClient();

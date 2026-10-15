@@ -89,6 +89,12 @@ export function Chat({ initialConversationId, initialMessages = [] }: ChatProps)
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ question, history, conversationId }),
       });
+      if (response.status === 429) {
+        // Rate limited: show the server's friendly message.
+        const { error } = (await response.json()) as { error: string };
+        updateMessage(assistantId, () => ({ status: "error", content: error }));
+        return;
+      }
       if (!response.ok || !response.body) throw new Error(`HTTP ${response.status}`);
 
       await readEvents(response, (event) => {
