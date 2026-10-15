@@ -12,6 +12,9 @@ export async function GET(request: Request) {
   }
 
   const { book, chapter, verseStart, verseEnd } = reference;
+  if (chapter > book.chapterCount) {
+    return Response.json({ error: `${book.name} has only ${book.chapterCount} chapters` }, { status: 404 });
+  }
   const verses = await getChapter(book.id, chapter);
 
   // Highlight the cited verse(s); for a whole-chapter reference, highlight nothing.

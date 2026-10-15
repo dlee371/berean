@@ -105,8 +105,8 @@ const REFERENCE_REGEX = new RegExp(
   "gi", // g = find every match, i = ignore upper/lower case
 );
 
-// Finds every reference in `text`. Skips impossible chapters (e.g. "John 30"),
-// but keeps impossible verses (e.g. "John 3:52"); the caller checks those against the database.
+// Finds every reference in `text`. Impossible verses like "John 3:52" or "Matthew 29:1"
+// are returned too; callers check them against the database.
 export function findReferences(text: string): Reference[] {
   const found: Reference[] = [];
 
@@ -122,8 +122,11 @@ export function findReferences(text: string): Reference[] {
       continue;
     }
 
+    // A chapter past the end of the book is skipped when it stands alone ("John 30" is more
+    // likely a typo than a reference), but kept with a verse ("Matthew 29:1"), so the
+    // citation checker can report it as a verse that doesn't exist.
     const chapter = Number(chapterStr);
-    if (chapter < 1 || chapter > book.chapterCount) continue;
+    if (chapter < 1 || (chapter > book.chapterCount && !verseStr)) continue;
 
     const reference: Reference = { book, chapter };
     if (verseStr) reference.verseStart = Number(verseStr);
